@@ -20,7 +20,7 @@ Clean CLI experience
 
 Resets after win or exit
 
-Fully written in <your language here> (e.g., JavaScript / Python / C++)
+Fully written in JavaScript
 
 🚀 Getting Started
 1. Clone the repository
