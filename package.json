@@ -1,0 +1,12 @@
+{
+  "name": "guessing-game",
+  "version": "1.0.0",
+  "description": "Multiplayer Guessing Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.0.0"
+  }
+}
