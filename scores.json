@@ -15,13 +15,13 @@
     "date": "12.12.2025"
   },
   {
+    "name": "Paulie",
+    "score": 2,
+    "date": "19.12.2025"
+  },
+  {
     "name": "Tony",
     "score": 4,
     "date": "13.12.2025"
-  },
-  {
-    "name": "Tadmor",
-    "score": 4,
-    "date": "15.12.2025"
   }
 ]

@@ -1,20 +1,16 @@
 // --- 1. INITIAL SETUP ---
 const socket = io(); // Connect to server
 
-
 // --- SOUND ENGINE ---
-// distinct sounds for winning, losing, and chat
 const winSound = new Audio("https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3");
 const loseSound = new Audio("https://www.soundjay.com/misc/sounds/fail-trombone-01.mp3");
 const chatSound = new Audio("https://www.soundjay.com/button/sounds/button-16.mp3");
 
 function playSound(type) {
-    // Reset sound to start (so you can play it rapidly)
     if (type === 'win') { winSound.currentTime = 0; winSound.play(); }
     if (type === 'lose') { loseSound.currentTime = 0; loseSound.play(); }
     if (type === 'chat') { chatSound.currentTime = 0; chatSound.play(); }
 }
-
 
 // Elements
 const setupScreen = document.getElementById("setup-screen");
@@ -22,13 +18,16 @@ const gameScreen = document.getElementById("game-screen");
 const messageTag = document.getElementById("message");
 const guessInput = document.getElementById("userGuess");
 const guessButton = document.getElementById("guessButton");
-const gameOverScreen = document.getElementById("game-over-screen");
-const yesButton = document.getElementById("yesButton");
+const gameOverSinglePlayer = document.getElementById("game-over-screen-singleplayer");
+const gameOverMultiplayer = document.getElementById("game-over-screen-multiplayer");
+const yesButtonSinglePlayer = document.getElementById("yesButtonSinglePlayer");
+const yesButtonMultiPlayer = document.getElementById("yesButtonMultiplayer");
 const gameScoreArea = document.getElementById("game-score-area");
 const chatContainer = document.getElementById("chat-container");
 const chatBox = document.getElementById("chat-box");
 const chatInput = document.getElementById("chatInput");
 const sendChatBtn = document.getElementById("sendChatBtn");
+
 // Variables
 let isMultiplayer = false;
 
@@ -41,6 +40,14 @@ function startGame(diff) {
     isMultiplayer = false;
     setupScreen.style.display = "none";
     gameScreen.style.display = "block";
+
+    // Ensure inputs are visible (in case they were hidden by a previous game over)
+    guessInput.style.display = "inline-block";
+    guessButton.style.display = "inline-block";
+    guessButton.disabled = false;
+    messageTag.innerText = "Game Started! Guess a number.";
+    messageTag.style.color = "black";
+
     fetch(`/start?difficulty=${diff}`);
 }
 
@@ -61,7 +68,7 @@ guessButton.addEventListener("click", function() {
                 messageTag.innerText = data;
                 guessInput.value = "";
                 if (data.includes("Game over") || data.includes("Congratulations")) {
-                    handleGameOver(data.includes("Congratulations"));
+                    handleGameOverSinglePlayer(data.includes("Congratulations"));
                 }
             });
     }
@@ -72,15 +79,11 @@ const multiplayerBtn = document.getElementById("multiplayerBtn");
 const multiplayerMessage = document.getElementById("multiplayerMessage");
 
 multiplayerBtn.addEventListener("click", function() {
-    console.log("Multiplayer Button Clicked!"); // <--- LOOK FOR THIS LOG
-
+    console.log("Multiplayer Button Clicked!");
     multiplayerBtn.disabled = true;
 
-    // Update the text safely
     if(multiplayerMessage) {
         multiplayerMessage.innerText = "Searching for opponent... ⏳";
-    } else {
-        console.error("Could not find multiplayerMessage element!");
     }
 
     socket.emit('join_game');
@@ -94,18 +97,20 @@ socket.on('game_start', function(data) {
     document.querySelector("#game-screen h1").innerText = "⚔️ Multiplayer Mode ⚔️";
     messageTag.innerText = "Opponent found! Game on!";
     messageTag.style.color = "black";
+
+    // Reset inputs
     guessButton.disabled = false;
+    guessInput.style.display = "inline-block";
+    guessButton.style.display = "inline-block";
+
     chatContainer.style.display = "block";
     chatBox.innerHTML= "";
+    gameOverMultiplayer.style.display = "none";
 
-    gameOverScreen.style.display = "none";
-
-
-    yesButton.innerText = "Play Again";
-    yesButton.disabled = false;
-    yesButton.style.background = "#48bb78"; // Original Green
-    document.getElementById("end-title").innerText = "Game Over"; // Reset title
-
+    yesButtonMultiPlayer.innerText = "Play Again";
+    yesButtonMultiPlayer.disabled = false;
+    yesButtonMultiPlayer.style.background = "#48bb78"; // Original Green
+    document.getElementById("end-title").innerText = "Game Over";
 });
 
 // Game Updates (High/Low)
@@ -114,19 +119,14 @@ socket.on('game_update', (data) => {
     messageTag.style.color = data.color || "black";
 });
 
-// Game Over (Win/Loss)
+// Game Over (Win/Loss) - Multiplayer
 socket.on('game_over', (data) => {
-    // 1. Update text and color
     if (data.winner) {
         messageTag.innerText = data.msg;
         messageTag.style.color = "green";
         document.body.style.backgroundColor = "#e6fffa";
         playSound('win');
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: {y: 0.6}
-        });
+        confetti({ particleCount: 150, spread: 70, origin: {y: 0.6} });
     } else {
         messageTag.innerText = data.msg;
         messageTag.style.color = "red";
@@ -134,11 +134,9 @@ socket.on('game_over', (data) => {
         playSound('lose');
     }
 
-    // 2. Stop the game
     guessButton.disabled = true;
-
-    // 👇 NEW: Show the "Play Again" screen
-   gameOverScreen.style.display = "block";
+    // Show Multiplayer specific game over screen
+    gameOverMultiplayer.style.display = "block";
 });
 
 
@@ -156,13 +154,36 @@ document.getElementById("showLeaderboardBtn").addEventListener("click", () => {
     });
 });
 
-yesButton.addEventListener("click", () => {
-    // 1. Change text to show we are waiting
-    yesButton.innerText = "Waiting for Opponent... ⏳";
-    yesButton.disabled = true; // Prevent double clicking
-    yesButton.style.background = "#cbd5e0"; // Turn it gray
+// --- 6. GAME OVER HANDLERS ---
 
-    // 2. Tell server
+// === SINGLE PLAYER "PLAY AGAIN" LOGIC (FILLED IN) ===
+yesButtonSinglePlayer.addEventListener("click", () => {
+    // 1. Hide the Game Over modal
+    gameOverSinglePlayer.style.display = "none";
+
+    // 2. Hide the Game Screen and Show Setup Screen (Back to Menu)
+    gameScreen.style.display = "none";
+    setupScreen.style.display = "block";
+
+    // 3. Reset State
+    isMultiplayer = false;
+    document.body.style.backgroundColor = ""; // Reset background
+    document.body.classList.remove("shake-effect");
+    messageTag.innerText = "";
+    gameScoreArea.style.display = "none"; // Hide save score form
+
+    // 4. Reset Inputs (Crucial: Unhide them for the next game)
+    guessInput.style.display = "inline-block";
+    guessButton.style.display = "inline-block";
+    guessInput.value = "";
+});
+
+
+// === MULTIPLAYER "PLAY AGAIN" LOGIC ===
+yesButtonMultiPlayer.addEventListener("click", () => {
+    yesButtonMultiPlayer.innerText = "Waiting for Opponent... ⏳";
+    yesButtonMultiPlayer.disabled = true;
+    yesButtonMultiPlayer.style.background = "#cbd5e0";
     socket.emit('request_rematch');
 });
 
@@ -174,143 +195,101 @@ document.getElementById("saveButton").addEventListener("click", () => {
     });
 });
 
-function handleGameOver(isWin) {
-    gameOverScreen.style.display = "block";
+function handleGameOverSinglePlayer(isWin) {
+    gameOverSinglePlayer.style.display = "block";
+
+    // Hide inputs so user can't guess anymore
     guessInput.style.display = "none";
     guessButton.style.display = "none";
 
-    if(isWin)
-    {
+    if(isWin) {
         gameScoreArea.style.display = "block";
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: {y: 0.6}
-        });
+        confetti({ particleCount: 150, spread: 70, origin: {y: 0.6} });
         playSound('win');
-    }
-    else{
+    } else {
         playSound('lose');
         confetti({
-            particleCount: 100,
-            angle: 270,        // ⬇️ Direction: Down
-            spread: 360,       // All across the top
-            origin: { y: 0 },  // Start at the very top of the screen
-            colors: ['#000000', '#444444', '#777777'], // Grayscale colors
-            gravity: 3,        // Falls fast/heavy
-            scalar: 0.6,       // Smaller "ash" like particles
-            ticks: 200         // Stays on screen a bit longer
+            particleCount: 100, angle: 270, spread: 360, origin: { y: 0 },
+            colors: ['#000000', '#444444', '#777777'],
+            gravity: 3, scalar: 0.6, ticks: 200
         });
-        // Add the class
-        document.body.classList.add("shake-effect");
 
-        // Remove it after 0.5s so it can happen again next time
+        document.body.classList.add("shake-effect");
         setTimeout(() => {
             document.body.classList.remove("shake-effect");
         }, 500);
     }
-
 }
 
 
-//chat
+
+
+// --- 7. CHAT LOGIC ---
 const typingIndicator = document.getElementById("typingIndicator");
 let typingTimeout = null;
 
-// 1. LISTEN: When I type in the box
 chatInput.addEventListener("input", () => {
-
-    // Tell server: "I am typing"
     socket.emit('typing', { isTyping: true });
-
-    // Clear any existing timer (reset the clock)
     if (typingTimeout) clearTimeout(typingTimeout);
-
-    // Set a new timer: If I don't type for 1 second, say "I stopped"
     typingTimeout = setTimeout(() => {
         socket.emit('typing', { isTyping: false });
     }, 1000);
 });
 
-// 2. LISTEN: When server says "Opponent is typing"
 socket.on('display_typing', (data) => {
-    if (data.isTyping) {
-        typingIndicator.style.visibility = "visible";
-    } else {
-        typingIndicator.style.visibility = "hidden";
-    }
+    typingIndicator.style.visibility = data.isTyping ? "visible" : "hidden";
 });
+
 sendChatBtn.addEventListener("click", () => {
     let message = chatInput.value;
     if(message === "") return;
-
     socket.emit('send_chat', {msg: message});
     chatInput.value = "";
     socket.emit('typing', { isTyping: false });
     clearTimeout(typingTimeout);
-
 });
+
 socket.on('receive_chat', (data) => {
-
     playSound('chat');
-
-    // 1. Create the Wrapper (holds Label + Bubble)
     const wrapper = document.createElement("div");
-    wrapper.classList.add("message-wrapper"); // Add CSS class
-
-    // 2. Create the Label (You / Opponent)
+    wrapper.classList.add("message-wrapper");
     const label = document.createElement("span");
     label.classList.add("chat-label");
-
-    // 3. Create the Bubble (The text)
     const bubble = document.createElement("div");
     bubble.classList.add("chat-bubble");
     bubble.innerText = data.msg;
 
-    // 4. Decide: Is it ME or THEM?
     if (socket.id === data.senderID) {
-        wrapper.classList.add("message-me"); // Right side, Blue gradient
+        wrapper.classList.add("message-me");
         label.innerText = "You";
     } else {
-        wrapper.classList.add("message-them"); // Left side, White/Gray
+        wrapper.classList.add("message-them");
         label.innerText = "Opponent";
     }
 
-    // 5. Assemble
     wrapper.appendChild(label);
     wrapper.appendChild(bubble);
-
-    // 6. Add to screen
     chatBox.appendChild(wrapper);
     chatBox.scrollTop = chatBox.scrollHeight;
-
 });
 
 socket.on('opponent_left', () => {
-    // 1. Lock the game
     guessButton.disabled = true;
-
-    // 2. Show a distinct error message
     messageTag.innerText = "🔌 Opponent disconnected! You win by default.";
     messageTag.style.color = "red";
-    document.body.style.backgroundColor = "#fff5f5"; // Light red warning bg
+    document.body.style.backgroundColor = "#fff5f5";
 
-    // 3. Show the "Game Over" popup but change the title
-    gameOverScreen.style.display = "block";
+    // Ensure we show the Multiplayer Game Over screen
+    gameOverMultiplayer.style.display = "block";
     document.getElementById("end-title").innerText = "Opponent Left 🏃‍♂️";
 
-    // 4. Disable Chat (Optional, but good UX)
     chatInput.disabled = true;
     sendChatBtn.disabled = true;
 });
 
 socket.on('rematch_requested', () => {
-    // Show a notification or change text
-    // We can hijack the game over title or the button text
     document.getElementById("end-title").innerText = "Opponent wants a rematch! ⚔️";
     messageTag.innerText = "Click 'Play Again' to accept!";
-
-    // Make the button pulse or glow to encourage clicking
-    yesButton.style.background = "#48bb78"; // Bright green
-    yesButton.innerText = "Accept Rematch!";
+    yesButtonMultiPlayer.style.background = "#48bb78";
+    yesButtonMultiPlayer.innerText = "Accept Rematch!";
 });
