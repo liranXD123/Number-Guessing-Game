@@ -107,7 +107,7 @@ const server = http.createServer((req, res) => {
             message = `${userGuess} is too high! Try again. Guesses left: ` + chancesLeft;
         }
         else if (userGuess < randomNum)
-            message = 'Too low! Try again. Guesses left: ' + chancesLeft;
+            message = `${userGuess} is too low! Try again. Guesses left: ` + chancesLeft;
 
         // 3. Send the result back as text
         res.writeHead(200, { 'Content-Type': 'text/plain' });
