@@ -52,7 +52,7 @@ Handling race conditions in multiplayer (e.g., what happens if both players gues
 
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/your-username/number-guessing-game.git](https://github.com/your-username/number-guessing-game.git)
+    git clone [https://github.com/liranXD123/number-guessing-game.git](https://github.com/liranXD123/number-guessing-game.git)
     cd number-guessing-game
     ```
 
